@@ -1,0 +1,103 @@
+﻿@{
+    ViewData["Title"] = "Voicer";
+}
+
+<h1 class="display-4 text-center my-4">Voicer</h1>
+
+<div class="container">
+    <div class="d-flex justify-content-center mt-4">
+        <div class="card mx-2" style="width: 18rem;">
+            <div class="card-body text-center">
+                <button class="btn btn-outline-primary quick-query-btn">Запусти калькулятор</button>
+            </div>
+        </div>
+        <div class="card mx-2" style="width: 18rem;">
+            <div class="card-body text-center">
+                <button class="btn btn-outline-primary quick-query-btn">Сколько время?</button>
+            </div>
+        </div>
+        <div class="card mx-2" style="width: 18rem;">
+            <div class="card-body text-center">
+                <button class="btn btn-outline-primary quick-query-btn">Какой сегодня день?</button>
+            </div>
+        </div>
+    </div>
+    <div class="text-center mb-3">
+        <button id="startRecordingBtn" class="btn btn-primary btn-lg mt-4 mb-1">
+            <i class="fas fa-microphone"></i> Start Recording
+        </button>
+    </div>
+    <div class="form-group">
+        <textarea id="userQuery" class="form-control" rows="4" placeholder="Your query will appear here..."></textarea>
+    </div>
+    <div class="text-center mb-3 d-flex justify-content-end mt-1">
+        <button id="sendQueryBtn" class="btn btn-success btn-lg d-flex justify-content-end">
+            <i class="fas fa-paper-plane"></i> Send Query
+        </button>
+    </div>
+    <div class="form-group">
+        <p id="response" class="alert alert-info"></p>
+    </div>
+</div>
+
+<script>
+    var recognition = new webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'ru-RU';
+
+    var speechSynthesis = window.speechSynthesis;
+
+    recognition.onresult = function (event) {
+        var result = event.results[0][0].transcript;
+        document.getElementById('userQuery').value = result;
+        sendQuery(result);
+    };
+
+    function stopCurrentSpeech() {
+        if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
+        }
+    }
+
+    document.getElementById('startRecordingBtn').addEventListener('click', function () {
+        stopCurrentSpeech();
+        recognition.start();
+    });
+
+    document.getElementById('sendQueryBtn').addEventListener('click', function () {
+        stopCurrentSpeech();
+        var query = document.getElementById('userQuery').value;
+        sendQuery(query);
+    });
+
+    document.querySelectorAll('.quick-query-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
+            stopCurrentSpeech();
+            var query = this.textContent;
+            sendQuery(query);
+        });
+    });
+
+    function sendQuery(query) {
+        fetch('/api/voice/ProcessVoiceQuery', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(query)
+        })
+            .then(response => response.text())
+            .then(response => {
+                document.getElementById('response').innerText = response;
+                speakResponse(response);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function speakResponse(response) {
+        var utterance = new SpeechSynthesisUtterance(response);
+        utterance.lang = 'ru-RU';
+        speechSynthesis.speak(utterance);
+    }
+</script>
